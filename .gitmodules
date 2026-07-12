@@ -1,0 +1,6 @@
+[submodule "RK-GRASP"]
+	path = RK-GRASP
+	url = https://github.com/antonioachaves/RK-GRASP
+[submodule "Instances/PFSP"]
+	path = Instances/PFSP
+	url = https://github.com/arnaud-m/pisco
