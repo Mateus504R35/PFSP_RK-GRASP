@@ -57,6 +57,40 @@ bool ReadNextDataLine(std::ifstream &file,std::string &line)
 }
 
 /************************************************************************************
+ Method: PrintInstance
+ Description: prints and validates the loaded instance
+*************************************************************************************/
+void PrintInstance()
+{
+    std::cout
+        << "Jobs: "
+        << numberOfJobs
+        << '\n';
+
+    std::cout
+        << "Machines: "
+        << numberOfMachines
+        << '\n';
+
+    for (int job = 0; job < numberOfJobs; job++)
+    {
+        std::cout << "Job " << job << ": ";
+
+        for (int machine = 0; machine < numberOfMachines; machine++)
+        {
+            std::cout << processingTime[job][machine];
+
+            if (machine + 1 < numberOfMachines)
+            {
+                std::cout << ' ';
+            }
+        }
+
+        std::cout << '\n';
+    }
+}
+
+/************************************************************************************
  Method: ReadData
  Description: read the input data
 *************************************************************************************/
@@ -204,40 +238,8 @@ void ReadData(char nameTable[])
         << " jobs and "
         << numberOfMachines
         << " machines.\n";
-}
 
-/************************************************************************************
- Method: PrintInstance
- Description: prints and validates the loaded instance
-*************************************************************************************/
-void PrintInstance()
-{
-    std::cout
-        << "Jobs: "
-        << numberOfJobs
-        << '\n';
-
-    std::cout
-        << "Machines: "
-        << numberOfMachines
-        << '\n';
-
-    for (int job = 0; job < numberOfJobs; job++)
-    {
-        std::cout << "Job " << job << ": ";
-
-        for (int machine = 0; machine < numberOfMachines; machine++)
-        {
-            std::cout << processingTime[job][machine];
-
-            if (machine + 1 < numberOfMachines)
-            {
-                std::cout << ' ';
-            }
-        }
-
-        std::cout << '\n';
-    }
+    PrintInstance();
 }
 
 /************************************************************************************

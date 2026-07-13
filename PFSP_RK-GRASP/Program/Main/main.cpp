@@ -24,7 +24,7 @@
 #include "GlobalVariables.h" 
 #include "GlobalFunctions.h"
 #include "Output.h"
-#include "../Problem/Problem.h"
+#include "../Problem/PFSP_Problem.h"
 #include "../MH/Method.h"
 #include "../MH/MultiStart.h"
 #include "../MH/BRKGA.h"
