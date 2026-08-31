@@ -1,10 +1,10 @@
-.git
-.gitignore
-Dockerfile
-compose.yaml
+services:
+  pfsp:
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-PFSP_RK-GRASP/Program/*.o
-PFSP_RK-GRASP/Program/Main/*.o
-PFSP_RK-GRASP/Program/runTest
+    image: pfsp-rk-grasp
 
-PFSP_RK-GRASP/Results/*
+    volumes:
+      - ./PFSP_RK-GRASP/Results:/app/PFSP_RK-GRASP/Results
