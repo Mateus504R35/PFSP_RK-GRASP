@@ -8,4 +8,6 @@ WORKDIR /app/PFSP_RK-GRASP/Program
 
 RUN make clean && make
 
-CMD ["./runTest", "../Instances/PFSP-tests-debug.csv", "3", "0"]
+ENTRYPOINT ["./runTest"]
+
+CMD ["../Instances/PFSP-tests-debug.csv", "3", "0"]
