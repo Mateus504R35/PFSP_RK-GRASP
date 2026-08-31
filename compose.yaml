@@ -1,0 +1,10 @@
+.git
+.gitignore
+Dockerfile
+compose.yaml
+
+PFSP_RK-GRASP/Program/*.o
+PFSP_RK-GRASP/Program/Main/*.o
+PFSP_RK-GRASP/Program/runTest
+
+PFSP_RK-GRASP/Results/*
