@@ -124,11 +124,19 @@ void Decoder(TSol &s)
 
     // define decoder function based in the random-key of position n+1
     // int dec = floor(s.vec[n].rk*numDecoders)+1;
-    int dec = 1;
+    int dec = 3;
     switch (dec)
     {
         case 1: 
             Dec1(s);
+            break;
+
+        case 2:
+            Dec2(s);
+            break;
+
+        case 3:
+            Dec3(s);
             break;
 
         default:

@@ -8,3 +8,9 @@ services:
 
     volumes:
       - ./PFSP_RK-GRASP/Results:/app/PFSP_RK-GRASP/Results
+      - ./PFSP_RK-GRASP/Instances:/app/PFSP_RK-GRASP/Instances:ro
+
+    command:
+      - "../Instances/PFSP-tests-debug.csv"
+      - "3"
+      - "0"

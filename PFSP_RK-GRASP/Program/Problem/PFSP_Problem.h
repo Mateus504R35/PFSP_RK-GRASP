@@ -10,9 +10,11 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <limits>
 
 // Variables declared in main.cpp
 extern int numDecoders; // number of decoders
@@ -229,9 +231,10 @@ void ReadData(char nameTable[])
 
 /************************************************************************************
  Method: CalculateFitness
- Description: calculates the PFSP makespan of the decoded permutation
+ Description: calculates the PFSP makespan of any valid job permutation.
+              It is independent of the decoder used to create the permutation.
 *************************************************************************************/
-double CalculateFitness(const TSol& s)
+double CalculateFitness(const std::vector<int>& permutation)
 {
     if (numberOfJobs <= 0 || numberOfMachines <= 0)
     {
@@ -239,22 +242,26 @@ double CalculateFitness(const TSol& s)
         std::exit(EXIT_FAILURE);
     }
 
-    if (static_cast<int>(s.vec.size()) < numberOfJobs)
+    if (permutation.empty() ||
+        static_cast<int>(permutation.size()) > numberOfJobs)
     {
         std::cerr
-            << "Error: solution vector has fewer positions than jobs.\n";
+            << "Error: invalid permutation size.\n";
         std::exit(EXIT_FAILURE);
     }
 
-    /*
-     * completionTime[m] is the completion time on machine m after
-     * processing the jobs already visited in the permutation.
-     */
-    std::vector<long long> completionTime(numberOfMachines, 0);
+    std::vector<bool> visited(numberOfJobs, false);
 
-    for (int position = 0; position < numberOfJobs; ++position)
+    std::vector<long long> completionTime(
+        numberOfMachines,
+        0
+    );
+
+    for (int position = 0;
+         position < static_cast<int>(permutation.size());
+         ++position)
     {
-        const int job = s.vec[position].sol;
+        const int job = permutation[position];
 
         if (job < 0 || job >= numberOfJobs)
         {
@@ -268,11 +275,24 @@ double CalculateFitness(const TSol& s)
             std::exit(EXIT_FAILURE);
         }
 
-        // First machine.
-        completionTime[0] += processingTime[job][0];
+        if (visited[job])
+        {
+            std::cerr
+                << "Error: duplicated job "
+                << job
+                << " in the permutation.\n";
 
-        // Remaining machines.
-        for (int machine = 1; machine < numberOfMachines; ++machine)
+            std::exit(EXIT_FAILURE);
+        }
+
+        visited[job] = true;
+
+        completionTime[0] +=
+            processingTime[job][0];
+
+        for (int machine = 1;
+             machine < numberOfMachines;
+             ++machine)
         {
             completionTime[machine] =
                 std::max(
@@ -285,7 +305,7 @@ double CalculateFitness(const TSol& s)
 
     return static_cast<double>(
         completionTime[numberOfMachines - 1]
-        );
+    );
 }
 
 /************************************************************************************
@@ -310,38 +330,349 @@ void Dec1(TSol& s)
     }
 
     /*
-     * Reassociate each random-key position with its original job.
-     * This is required because the framework keeps the decoded values
-     * in the sol fields between calls to Decoder().
+     * The chromosome positions represent the jobs.
+     * The decoder sorts job indices according to their random keys,
+     * without changing the order of the random-key genes themselves.
      */
-    for (int job = 0; job < numberOfJobs; ++job)
-    {
-        s.vec[job].sol = job;
-    }
+    std::vector<int> permutation(numberOfJobs);
 
-    /*
-     * Sort only the job genes. The extra position s.vec[n] is reserved
-     * by RK-GRASP for decoder selection.
-     */
+    std::iota(
+        permutation.begin(),
+        permutation.end(),
+        0
+    );
+
     std::stable_sort(
-        s.vec.begin(),
-        s.vec.begin() + numberOfJobs,
-        [](const TVecSol& a, const TVecSol& b)
+        permutation.begin(),
+        permutation.end(),
+        [&s](const int jobA, const int jobB)
         {
-            if (a.rk == b.rk)
+            if (s.vec[jobA].rk == s.vec[jobB].rk)
             {
-                return a.sol < b.sol;
+                return jobA < jobB;
             }
 
-            return a.rk < b.rk;
+            return s.vec[jobA].rk < s.vec[jobB].rk;
         }
     );
 
-    s.ofv = CalculateFitness(s);
+    /*
+     * Store the decoded permutation in the sol fields so the framework
+     * and future local searches can access it.
+     */
+    for (int position = 0; position < numberOfJobs; ++position)
+    {
+        s.vec[position].sol = permutation[position];
+    }
+
+    /*
+     * Every decoder must evaluate its decoded permutation using the same
+     * PFSP objective function.
+     */
+    
+    s.ofv = CalculateFitness(permutation);
 }
 
-void Dec2(TSol& s) {}
-void Dec3(TSol& s) {}
+
+/*
+ * NEH:
+ *
+ * - sort jobs in descending order of total processing time;
+ * - build the permutation incrementally, inserting each job in the best position.
+ */
+void Dec2(TSol& s)
+{
+    if (numberOfJobs <= 0 || numberOfMachines <= 0)
+    {
+        std::cerr << "Error: no PFSP instance has been loaded.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    /*
+     * Step 1:
+     * Create the initial list of jobs.
+     */
+    std::vector<int> jobs(numberOfJobs);
+
+    std::iota(
+        jobs.begin(),
+        jobs.end(),
+        0
+    );
+
+    /*
+     * Step 2:
+     * Sort jobs in descending order of total processing time.
+     *
+     * NEH priority:
+     *
+     * P_j = sum of processing times of job j
+     */
+    std::stable_sort(
+        jobs.begin(),
+        jobs.end(),
+        [](const int jobA, const int jobB)
+        {
+            long long totalA = 0;
+            long long totalB = 0;
+
+            for (int machine = 0;
+                machine < numberOfMachines;
+                ++machine)
+            {
+                totalA += processingTime[jobA][machine];
+                totalB += processingTime[jobB][machine];
+            }
+
+            if (totalA == totalB)
+            {
+                return jobA < jobB;
+            }
+
+            return totalA > totalB;
+        }
+    );
+
+    /*
+     * Step 3:
+     * Build the permutation incrementally.
+     */
+    std::vector<int> permutation;
+
+    for (int job : jobs)
+    {
+        std::vector<int> bestPermutation;
+
+        double bestFitness =
+            std::numeric_limits<double>::infinity();
+
+        /*
+         * Try inserting the current job in every possible position.
+         */
+        for (std::size_t position = 0;
+            position <= permutation.size();
+            ++position)
+        {
+            std::vector<int> candidate = permutation;
+
+            candidate.insert(
+                candidate.begin() + position,
+                job
+            );
+
+            const double candidateFitness =
+                CalculateFitness(candidate);
+
+            if (candidateFitness < bestFitness)
+            {
+                bestFitness = candidateFitness;
+                bestPermutation = candidate;
+            }
+        }
+
+        permutation = bestPermutation;
+    }
+
+    /*
+     * Store the final decoded permutation in TSol.
+     */
+    for (int position = 0;
+         position < numberOfJobs;
+         ++position)
+    {
+        s.vec[position].sol =
+            permutation[position];
+    }
+
+    /*
+     * Evaluate the complete NEH solution using the same fitness
+     * used by every other decoder.
+     */
+    s.ofv = CalculateFitness(permutation);
+}
+
+/*
+ * RK + NEH hybrid decoder:
+ *
+ * - combines the classical NEH priority (total processing time)
+ *   with the random-key priority;
+ * - jobs with larger total processing time are favored, as in NEH;
+ * - jobs with smaller random keys are also favored, as in Dec1;
+ * - after defining the job order, the permutation is built using
+ *   the standard NEH best-insertion procedure.
+ */
+void Dec3(TSol& s)
+{
+    if (numberOfJobs <= 0 || numberOfMachines <= 0)
+    {
+        std::cerr << "Error: no PFSP instance has been loaded.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (static_cast<int>(s.vec.size()) < numberOfJobs)
+    {
+        std::cerr
+            << "Error: solution vector has fewer positions than jobs.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    /*
+     * Weight of the NEH component in the hybrid priority.
+     *
+     * alpha = 1.0 -> classical NEH ordering
+     * alpha = 0.0 -> pure random-key ordering
+     */
+    const double alpha = 0.70;
+
+    /*
+     * Step 1:
+     * Calculate the total processing time of each job.
+     */
+    std::vector<long long> totalProcessing(numberOfJobs, 0);
+
+    long long minTotal = std::numeric_limits<long long>::max();
+    long long maxTotal = std::numeric_limits<long long>::min();
+
+    for (int job = 0; job < numberOfJobs; ++job)
+    {
+        for (int machine = 0; machine < numberOfMachines; ++machine)
+        {
+            totalProcessing[job] += processingTime[job][machine];
+        }
+
+        minTotal = std::min(minTotal, totalProcessing[job]);
+        maxTotal = std::max(maxTotal, totalProcessing[job]);
+    }
+
+    /*
+     * Step 2:
+     * Build one hybrid priority value for each job.
+     *
+     * NEH component:
+     *     larger total processing time -> larger priority.
+     *
+     * RK component:
+     *     smaller random key -> larger priority.
+     *
+     * Both components are kept in [0,1] before they are combined.
+     */
+    std::vector<double> priority(numberOfJobs, 0.0);
+
+    for (int job = 0; job < numberOfJobs; ++job)
+    {
+        double nehPriority = 1.0;
+
+        if (maxTotal != minTotal)
+        {
+            nehPriority =
+                static_cast<double>(
+                    totalProcessing[job] - minTotal
+                )
+                /
+                static_cast<double>(
+                    maxTotal - minTotal
+                );
+        }
+
+        const double rkPriority = 1.0 - s.vec[job].rk;
+
+        priority[job] =
+            alpha * nehPriority
+            + (1.0 - alpha) * rkPriority;
+    }
+
+    /*
+     * Step 3:
+     * Sort jobs according to the hybrid RK + NEH priority.
+     */
+    std::vector<int> jobs(numberOfJobs);
+
+    std::iota(
+        jobs.begin(),
+        jobs.end(),
+        0
+    );
+
+    std::stable_sort(
+        jobs.begin(),
+        jobs.end(),
+        [&priority, &totalProcessing, &s](const int jobA, const int jobB)
+        {
+            if (priority[jobA] != priority[jobB])
+            {
+                return priority[jobA] > priority[jobB];
+            }
+
+            if (totalProcessing[jobA] != totalProcessing[jobB])
+            {
+                return totalProcessing[jobA] > totalProcessing[jobB];
+            }
+
+            if (s.vec[jobA].rk != s.vec[jobB].rk)
+            {
+                return s.vec[jobA].rk < s.vec[jobB].rk;
+            }
+
+            return jobA < jobB;
+        }
+    );
+
+    /*
+     * Step 4:
+     * Apply the NEH best-insertion construction using the hybrid
+     * order generated above.
+     */
+    std::vector<int> permutation;
+
+    for (int job : jobs)
+    {
+        std::vector<int> bestPermutation;
+
+        double bestFitness =
+            std::numeric_limits<double>::infinity();
+
+        for (std::size_t position = 0;
+             position <= permutation.size();
+             ++position)
+        {
+            std::vector<int> candidate = permutation;
+
+            candidate.insert(
+                candidate.begin() + position,
+                job
+            );
+
+            const double candidateFitness =
+                CalculateFitness(candidate);
+
+            if (candidateFitness < bestFitness)
+            {
+                bestFitness = candidateFitness;
+                bestPermutation = candidate;
+            }
+        }
+
+        permutation = bestPermutation;
+    }
+
+    /*
+     * Step 5:
+     * Store the decoded permutation in TSol.
+     */
+    for (int position = 0;
+         position < numberOfJobs;
+         ++position)
+    {
+        s.vec[position].sol =
+            permutation[position];
+    }
+
+    /*
+     * All decoders use the same PFSP objective function.
+     */
+    s.ofv = CalculateFitness(permutation);
+}
+
 void Dec4(TSol& s) {}
 void Dec5(TSol& s) {}
 
