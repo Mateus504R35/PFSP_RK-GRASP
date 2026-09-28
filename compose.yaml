@@ -11,6 +11,6 @@ services:
       - ./PFSP_RK-GRASP/Instances:/app/PFSP_RK-GRASP/Instances:ro
 
     command:
-      - "../Instances/PFSP-tests-debug.csv"
+      - "../Instances/PFSP-tests-decoders.csv"
       - "3"
       - "0"

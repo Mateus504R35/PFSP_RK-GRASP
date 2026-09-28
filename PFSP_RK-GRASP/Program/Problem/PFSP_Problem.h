@@ -680,7 +680,83 @@ void Dec5(TSol& s) {}
  Method: Local Search Heuristics
  Description: implement local searches here if required
 *************************************************************************************/
-void LS1(TSol& s) {}
+void LS1(TSol& s)
+{
+    // Recupera a permutacao atual produzida pelo decoder
+    std::vector<int> currentPermutation(numberOfJobs);
+
+    for (int i = 0; i < numberOfJobs; ++i)
+    {
+        currentPermutation[i] = s.vec[i].sol;
+    }
+
+    double currentFitness =
+        CalculateFitness(currentPermutation);
+
+    bool improved = true;
+
+    while (improved)
+    {
+        improved = false;
+
+        double bestFitness = currentFitness;
+        std::vector<int> bestPermutation = currentPermutation;
+
+        // Escolhe um job para remover
+        for (int i = 0; i < numberOfJobs; ++i)
+        {
+            const int job = currentPermutation[i];
+
+            // Remove o job da posicao i
+            std::vector<int> partialPermutation =
+                currentPermutation;
+
+            partialPermutation.erase(
+                partialPermutation.begin() + i
+            );
+
+            // Testa inserir o job em todas as posicoes
+            for (int j = 0; j < numberOfJobs; ++j)
+            {
+                std::vector<int> candidate =
+                    partialPermutation;
+
+                candidate.insert(
+                    candidate.begin() + j,
+                    job
+                );
+
+                double candidateFitness =
+                    CalculateFitness(candidate);
+
+                // Best Improvement:
+                // guarda o melhor movimento encontrado
+                if (candidateFitness < bestFitness)
+                {
+                    bestFitness = candidateFitness;
+                    bestPermutation = candidate;
+                    improved = true;
+                }
+            }
+        }
+
+        // Se encontrou melhoria, move para a nova solucao
+        if (improved)
+        {
+            currentPermutation = bestPermutation;
+            currentFitness = bestFitness;
+        }
+    }
+
+    // Salva a permutacao melhorada em TSol
+    for (int i = 0; i < numberOfJobs; ++i)
+    {
+        s.vec[i].sol = currentPermutation[i];
+    }
+
+    s.ofv = currentFitness;
+}
+
 void LS2(TSol& s) {}
 void LS3(TSol& s) {}
 void LS4(TSol& s) {}

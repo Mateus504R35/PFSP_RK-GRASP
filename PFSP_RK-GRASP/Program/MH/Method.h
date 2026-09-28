@@ -1,8 +1,18 @@
 #ifndef _Method_H
 #define _Method_H
 
-// pseudo-random number generator Mersenne Twister
-static std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+// Pseudo-random number generator used by the whole optimization framework.
+// The seed is explicitly set at the beginning of each run via SetSeed().
+static std::mt19937 rng;
+
+/************************************************************************************
+ Method: SetSeed
+ Description: Seed the Mersenne Twister used by all random operations
+*************************************************************************************/
+static void SetSeed(unsigned int seed)
+{
+    rng.seed(seed);
+}
 
 /************************************************************************************
  Method: sortByRk
@@ -122,9 +132,20 @@ void Decoder(TSol &s)
     // copy the random-key sequence of current solution 
     TSol temp = s;
 
-    // define decoder function based in the random-key of position n+1
-    // int dec = floor(s.vec[n].rk*numDecoders)+1;
-    int dec = 3;
+    // Decoder selection modes:
+    //   fixedDecoder = 0    -> multi-decoder mode: the extra RK gene selects 1..numDecoders
+    //   fixedDecoder = 1..N -> controlled experiment: always use the selected decoder
+    int dec = fixedDecoder;
+
+    if (dec == 0)
+    {
+        dec = static_cast<int>(std::floor(s.vec[n].rk * numDecoders)) + 1;
+
+        // randomico() generates values in [0,1), but keep the bounds defensive.
+        if (dec < 1) dec = 1;
+        if (dec > numDecoders) dec = numDecoders;
+    }
+
     switch (dec)
     {
         case 1: 
@@ -167,7 +188,7 @@ static TSol hNeighborhood(TSol x, float h) //, float theta
     for (int i = 0; i < n; i++){
         RKorder[i] = i;
     }
-    std::random_shuffle (RKorder.begin(), RKorder.end());
+    std::shuffle(RKorder.begin(), RKorder.end(), rng);
 
     double norm = 0.0;
     for (int i=0; i<n; i++)
@@ -483,7 +504,7 @@ static void SwapLS(TSol &s)
     for (int i = 0; i < n; i++){
         RKorder[i] = i;
     }
-    std::random_shuffle(RKorder.begin(), RKorder.end());
+    std::shuffle(RKorder.begin(), RKorder.end(), rng);
     
     TSol sBest = s;
     // #pragma omp parallel for num_threads(MAX_THREADS)
@@ -517,7 +538,7 @@ static void InvertLS(TSol &s)
     for (int i = 0; i < n; i++){
         RKorder[i] = i;
     }
-    std::random_shuffle (RKorder.begin(), RKorder.end());
+    std::shuffle(RKorder.begin(), RKorder.end(), rng);
 
     TSol sBest = s;
     // #pragma omp parallel for num_threads(MAX_THREADS)
@@ -550,7 +571,7 @@ static void FareyLS(TSol &s)
     for (int i = 0; i < n; i++){
         RKorder[i] = i;
     }
-    std::random_shuffle (RKorder.begin(), RKorder.end());
+    std::shuffle(RKorder.begin(), RKorder.end(), rng);
 
     std::vector<double> F = {0.00, 0.142857, 0.166667, 0.20, 0.25, 0.285714, 0.333333, 0.40, 0.428571, 0.50, 
                              0.571429, 0.60, 0.666667, 0.714286, 0.75, 0.80, 0.833333, 0.857143, 0.99999};
@@ -603,7 +624,7 @@ void RVND(TSol &s, float h)
         numIter++;
 
         // randomly choose a neighborhood
-        int pos = rand() % NSL.size();
+        int pos = irandomico(0, static_cast<int>(NSL.size()) - 1);
         k = NSL[pos];
 
         switch (k)

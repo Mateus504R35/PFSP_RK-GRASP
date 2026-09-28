@@ -2,6 +2,12 @@
 #define _GlobalFunctions_H
 
 /************************************************************************************
+ Method: SetSeed
+ Description: Seed the Mersenne Twister used by all random operations
+*************************************************************************************/
+static void SetSeed(unsigned int seed);
+
+/************************************************************************************
  Method: RANDOMICO
  Description: Generate a double random number between min and max
 *************************************************************************************/

@@ -1,0 +1,6 @@
+# Controlled comparison: same instance, same seeds, same runtime, one fixed decoder per row.
+# TARGET=0 prevents early stopping at the known upper bound 1278.
+INSTANCE DEBUG DECODERS FIXED_DECODER MAXTIME MAXRUNS THREADS TARGET
+PFSP/ta041.txt 1 3 1 1 5 1 0
+PFSP/ta041.txt 1 3 2 1 5 1 0
+PFSP/ta041.txt 1 3 3 1 5 1 0

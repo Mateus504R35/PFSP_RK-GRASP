@@ -10,7 +10,8 @@
 // Input File
 char instance[100];                         // name of instance
 int debug = 1;                              // 0 - run mode      		    1 - debug mode
-int numDecoders = 1;                        // number of decoders
+int numDecoders = 1;                        // number of available decoders
+int fixedDecoder = 0;                       // 0 = multi-decoder by RK gene; 1..N = force a decoder
 int MAXTIME = 1;                            // maximum runtime
 int MAXRUNS =  1;                           // maximum number of runs of the method
 unsigned MAX_THREADS = 40;            		// number of threads

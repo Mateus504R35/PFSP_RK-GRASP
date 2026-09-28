@@ -257,8 +257,12 @@ extern void GRASP(int method, int control)
             if (debug) printf("\nIter = %d \t h = %.4lf \t Constructive (%.1lf) = %.2lf", iter, h, sigma, floorf(sLine.ofv*10)/10);
             
             // apply local search in current solution
+            //sLineBest = sLine;
+            //RVND(sLineBest, h);
+            
             sLineBest = sLine;
-            RVND(sLineBest, h);
+
+            LS1(sLineBest);
 
             if (debug) printf("\t Local search (%d, %.3lf) = %.5lf (%8.2lf)", ls, theta, floorf(sLineBest.ofv*10)/10, sLine.ofv - sLineBest.ofv);
 
@@ -301,10 +305,6 @@ extern void GRASP(int method, int control)
                 break;
             }
         } 
-
-        // create a new random seed
-        if (!debug)
-            srand(time(NULL)); 
 
         // restart the current solution 
         // CreateInitialSolutions(s); 

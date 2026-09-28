@@ -131,8 +131,6 @@ static void BRKGA(int method, int control)
             
             if (debug) 
                 printf("\n\nShaking elite and reset non-elite...\n\n");
-            else
-                srand(time(NULL)); 
 
             // reset the number of generations without improvement
             bestGeneration = numGenerations;
